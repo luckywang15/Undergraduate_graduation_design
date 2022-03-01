@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+    <style type="text/css">
+        #allmap {
+            width: 300px;
+            height: 300px;
+        }
+
+        p {
+            margin-left: 5px;
+            font-size: 14px;
+        }
+    </style>
+    <style type="text/css">
+        body, html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            font-family: "微软雅黑";
+        }
+
+        #allmap {
+            height: 100%;
+            width: 100%;
+        }
+
+        #r-result, #r-result table {
+            width: 100%;
+        }
+    </style>
+    <script type="text/javascript"
+            src="http://api.map.baidu.com/api?v=2.0&ak=OG4UN1r8CVy6I30ONa0DF4XOQhUCxzwA"></script>
+    <script type="text/javascript" src="http://libs.baidu.com/jquery/1.8.2/jquery.min.js"></script>
+    <title>路线规划查询</title>
+</head>
+<body>
+{% include 'navbar.html' %}
+<div id="search" style="padding-top: 3.3%; width: 30%;position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto;">
+    <div class="input-group" style="width: 100%">
+        <input type="text" id="start" placeholder="正在定位您的位置..." style="border-radius:5px" class="form-control" aria-label="...">
+    </div>
+    <div class="input-group" style="width: 100%">
+        <input type="text" id="end" placeholder="请选择终点" οnchange="searchRoute()" style="border-radius:5px" class="form-control" aria-label="...">
+    </div>
+
+    <div style="z-index:999" class="btn-group btn-group-justified" role="group" aria-label="...">
+        <div id="bus-search" class="btn-group" role="group">
+            <button type="button" class="btn btn-default">公交</button>
+        </div>
+        <div id="driver-search" class="btn-group" role="group">
+            <button type="button" class="btn btn-default">自驾</button>
+        </div>
+        <div id="walk-search" class="btn-group" role="group">
+            <button type="button" class="btn btn-default">步行</button>
+        </div>
+    </div>
+
+</div>
+<div id="allmap"></div>
+<div id="r-result"></div>
+
+
+<script type="text/javascript">
+    $("#bus-search").css("background-color", "#95B7EE");
+    window.start_point = "";
+    window.end_point = "";
+    // 定位对象
+    var map;
+    var geoc = new BMap.Geocoder();
+    var geolocation = new BMap.Geolocation();
+    geolocation.getCurrentPosition(function (r) {
+        if (this.getStatus() == BMAP_STATUS_SUCCESS) {
+            window.start_point = r.point.lng + "," + r.point.lat;
+            map = new BMap.Map("allmap");   // 创建Map实例
+            map.setMapStyle({style: 'hardedge'}); //  极简风格
+            var ep = window.start_point.split(",");
+
+
+            function addMapControl() {
+                //向地图中添加缩放控件
+                var ctrl_nav = new BMap.NavigationControl({
+                    anchor: BMAP_ANCHOR_TOP_LEFT,
+                    type: BMAP_NAVIGATION_CONTROL_ZOOM
+                });
+                map.addControl(ctrl_nav);
+
+                //向地图中添加比例尺控件
+                var ctrl_sca = new BMap.ScaleControl({anchor: BMAP_ANCHOR_BOTTOM_RIGHT, offset: new BMap.Size(10, 5)});
+                map.addControl(ctrl_sca);
+
+            }
+
+            map.centerAndZoom(new BMap.Point(ep[0], ep[1]), 13);
+            map.enableScrollWheelZoom(true);       //启用滚轮放大缩小
+            var local = new BMap.LocalSearch(map, {
+                renderOptions: {map: map}
+            });
+            local.search("大学");
+
+            setLocation(r.point);
+
+            addMapControl();
+        } else {
+            $("#start").attr("placeholder", "请输入您的当前位置")
+            alert('无法定位到您的当前位置，导航失败，请手动输入您的当前位置！' + this.getStatus());
+        }
+    }, {enableHighAccuracy: true});
+
+
+    function setLocation(point) {
+        geoc.getLocation(point, function (rs) {
+            var addComp = rs.addressComponents;
+            var result = addComp.province + addComp.city + addComp.district;
+            $("#start").val(result);
+
+            //设置定位图标
+            var new_point = new BMap.Point(rs.point.lng, rs.point.lat);
+            var marker = new BMap.Marker(new_point, {isOpen: true});
+            map.addOverlay(marker);
+            var opts = {
+                width: 40,     // 信息窗口宽度
+                height: 18,     // 信息窗口高度
+                title: "我的位置", // 信息窗口标题
+                isOpen: 1,
+            }
+            var infoWindow = new BMap.InfoWindow("地址 : " + $("#start").val(), opts);  // 创建信息窗口对象
+            marker.addEventListener("click", function () {
+                map.openInfoWindow(infoWindow, new_point); //开启信息窗口
+            });
+            //设置监听，点选地图设终点，规划路线
+            map.addEventListener("click",
+                function (e) {
+                    window.end_point = e.point.lng + "," + e.point.lat;
+                    var local = new BMap.LocalSearch(map, {
+                        renderOptions: {map: map}
+                    });
+                    searchRoute();
+                });
+        });
+    }
+
+    var type = "bus";
+    $("#bus-search,#driver-search,#walk-search").click(function () {
+        var id = $(this).attr("id");
+        $(".button").css("background-color", "#fff");
+        $("#" + id).css("background-color", "#95B7EE");
+        type = "bus";
+        if (id == "bus-search") {
+            type = "bus";
+        } else if (id == "driver-search") {
+            type = "driver";
+        } else if (id == "walk-search") {
+            type = "walk";
+        }
+        searchRoute();
+    });
+
+    //搜索路线
+    function searchRoute() {
+        if ($("#end").val().length != 0) {
+            var end = $("#end").val();
+            $("#end").val("");
+        } else {
+            var pe = window.end_point.split(",");
+            var end = new BMap.Point(pe[0], pe[1]);
+        }
+        var ps = window.start_point.split(",");
+        var start = new BMap.Point(ps[0], ps[1]);
+        if (type == "bus") {
+            var transit = new BMap.TransitRoute(map, {
+                renderOptions: {
+                    map: map,
+                    panel: "r-result",
+                    autoViewport: false
+                }
+            });
+            transit.search(start, end);
+        } else if (type == "driver") {
+            var driving = new BMap.DrivingRoute(map, {
+                renderOptions: {
+                    map: map,
+                    panel: "r-result",
+                    autoViewport: false
+                }
+            });
+            driving.search(start, end);
+        } else if (type == "walk") {
+            var walking = new BMap.WalkingRoute(map, {
+                renderOptions: {
+                    map: map,
+                    panel: "r-result",
+                    autoViewport: false
+                }
+            });
+            walking.search(start, end);
+        }
+    }
+</script>
+</body>
+</html>
