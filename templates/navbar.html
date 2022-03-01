@@ -1,0 +1,40 @@
+<nav class="navbar navbar-default navbar-fixed-top navbar-inverse">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+            <!--这个button暂时不用管，是用来做响应式的-->
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                    data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">城市旅游推荐系统</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+                <li {% if request.path == '/' %} class="active" {% endif %}><a href="/">旅游推荐</a></li>
+                <li {% if request.path == '/roadline' %} class="active" {% endif %}><a href="/roadline">路线规划查询</a></li>
+                <li {% if request.path|slice:"7" == '/region' %} class="active" {% endif %}><a href="/region/110000">全国天气查询</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       role="button" aria-haspopup="true"
+                       aria-expanded="false">天气分析 <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="/max_degree">最高温</a></li>
+                        <li><a href="/min_degree">最低温</a></li>
+                        <li><a href="/dif_in_tempt">昼夜温差</a></li>
+                        <li><a href="/wind_power">风力</a></li>
+                        <!--分割线separator-->
+                        <li role="separator" class="divider"></li>
+                    </ul>
+                </li>
+                <li {% if request.path == '/comments' %} class="active" {% endif %}><a href="/comments">留言</a></li>
+            </ul>
+        </div><!-- /.navbar-collapse -->
+    </div><!-- /.container-fluid -->
+</nav>
